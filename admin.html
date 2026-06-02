@@ -219,14 +219,12 @@ document.querySelectorAll('.atab').forEach(t=>{
 
 async function loadAll(){
   document.getElementById('admin-content').innerHTML=`<div class="empty"><span class="spinner-small"></span>載入中…</div>`;
-  try{
-    const [rStaff,rRec]=await Promise.all([
-      fetch(`${GAS_URL}?action=getStaffAdmin`).then(r=>r.json()),
-      fetch(`${GAS_URL}?action=getRecords`).then(r=>r.json())
-    ]);
-    staffList=rStaff.list||[];
-    allRecords=rRec.list||[];
-  }catch(e){staffList=[];allRecords=[];}
+  const [rStaff,rRec]=await Promise.all([
+    fetch(`${GAS_URL}?action=getStaffAdmin`).then(r=>r.json()).catch(()=>({list:[]})),
+    fetch(`${GAS_URL}?action=getRecords`).then(r=>r.json()).catch(()=>({list:[]}))
+  ]);
+  staffList=rStaff.list||[];
+  allRecords=rRec.list||[];
   updateBadge();
   renderTab();
 }
