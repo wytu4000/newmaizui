@@ -107,6 +107,26 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .toast-sub{font-size:11px;opacity:0.65;margin-top:6px;font-weight:400;letter-spacing:2px}
 .overlay{display:none;position:fixed;inset:0;background:rgba(24,18,13,0.45);z-index:998;backdrop-filter:blur(1px)}
 .overlay.show{display:block}
+/* 審核分頁 */
+.pages.no-footer{bottom:var(--safe-b)}
+.rev-card{background:#fff;border:1.5px solid var(--rule);border-radius:10px;margin:16px 16px 0;overflow:hidden}
+.rev-card:last-child{margin-bottom:16px}
+.rev-head{padding:10px 14px;background:var(--paper-2);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule)}
+.rev-type{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:2px;padding:3px 8px;border-radius:4px;color:#fff}
+.rev-type.discount{background:var(--ink-2)}
+.rev-type.waste{background:#7a3500}
+.rev-time{font-family:'Space Mono',monospace;font-size:10px;color:var(--ink-3)}
+.rev-body{padding:12px 14px;display:flex;flex-direction:column;gap:5px}
+.rev-row{display:flex;gap:8px;align-items:baseline}
+.rev-k{font-family:'Space Mono',monospace;font-size:10px;color:var(--ink-3);letter-spacing:1px;width:52px;flex-shrink:0}
+.rev-v{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-2);font-weight:500}
+.rev-v.big{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--red)}
+.rev-foot{padding:10px 14px;border-top:1px solid var(--rule);display:flex;gap:8px}
+.btn-rev-ok{flex:1;padding:12px;background:var(--ink);border:none;border-radius:6px;font-family:'Noto Serif TC',serif;font-size:14px;font-weight:700;color:#fff;letter-spacing:3px;cursor:pointer;touch-action:manipulation;transition:all 0.15s}
+.btn-rev-ok:active{background:#1e6b3a;transform:scale(0.98)}
+.btn-rev-no{padding:12px 14px;border:1.5px solid var(--rule);background:transparent;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-3);cursor:pointer;touch-action:manipulation}
+.btn-rev-no:active{background:var(--red);color:#fff;border-color:var(--red)}
+.rev-empty{text-align:center;padding:48px 20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--ink-3);letter-spacing:2px;line-height:2}
 </style>
 </head>
 <body>
@@ -123,6 +143,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 <div class="tab-bar">
   <div class="tab active" data-tab="0">💰 優惠折扣</div>
   <div class="tab" data-tab="1">📦 耗損回報</div>
+  <div class="tab" data-tab="2" id="review-tab" style="display:none">🔍 審核</div>
 </div>
 <div class="pages">
   <!-- 頁①優惠折扣 -->
@@ -207,6 +228,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="err" id="w-err-note">⚠ 請填寫備註原因</div>
     </div>
   </div>
+  <!-- 頁③審核 -->
+  <div class="page" id="page-2"></div>
 </div>
 <div class="footer-bar">
   <button class="btn-clear" id="btn-clear">清除</button>
@@ -243,6 +266,16 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById(`page-${curTab}`).classList.add('active');
+    const footer=document.querySelector('.footer-bar');
+    const pages=document.querySelector('.pages');
+    if(curTab===2){
+      footer.style.display='none';
+      pages.classList.add('no-footer');
+      loadReview();
+    }else{
+      footer.style.display='';
+      pages.classList.remove('no-footer');
+    }
   });
 });
 
@@ -449,6 +482,84 @@ function showToast(msg,sub,type){
 }
 function showErr(id){document.getElementById(id)?.classList.add('show')}
 function hideErr(id){document.getElementById(id)?.classList.remove('show')}
+
+// 審核分頁（主管/店長限定）
+const staffRole=sessionStorage.getItem('staff_role')||'';
+if(['主管','店長'].includes(staffRole)){
+  document.getElementById('review-tab').style.display='';
+}
+
+let reviewRecords=[];
+async function loadReview(){
+  const page=document.getElementById('page-2');
+  page.innerHTML='<div class="rev-empty">載入中…</div>';
+  try{
+    const res=await fetch(`${GAS_URL}?action=getRecords`);
+    const data=await res.json();
+    reviewRecords=(data.list||[]).filter(r=>r['狀態']==='待確認');
+  }catch(e){reviewRecords=[];}
+  renderReview();
+}
+function fmtDate(v){
+  if(!v&&v!==0)return'';
+  const s=String(v).trim();
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(s))return s;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s.replace(/-/g,'/');
+  if(s.includes('T')){try{const d=new Date(s);return`${d.getUTCFullYear()}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${String(d.getUTCDate()).padStart(2,'0')}`}catch(e){}}
+  return s;
+}
+function fmtTime(v){
+  if(!v&&v!==0)return'';
+  const s=String(v).trim();
+  if(/^\d{2}:\d{2}/.test(s))return s.slice(0,5);
+  if(s.includes('T')){try{const d=new Date(s);return`${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`}catch(e){}}
+  return s;
+}
+function renderReview(){
+  const page=document.getElementById('page-2');
+  if(!reviewRecords.length){page.innerHTML='<div class="rev-empty">— 目前無待確認回報 —</div>';return}
+  page.innerHTML=reviewRecords.map(r=>{
+    const isDsc=r['類型']==='優惠折扣';
+    const disc=Number(r['折扣金額'])||0;
+    const body=isDsc
+      ?`<div class="rev-row"><div class="rev-k">人員</div><div class="rev-v">${r['操作人員']||''}</div></div>
+         <div class="rev-row"><div class="rev-k">項目</div><div class="rev-v">${r['項目']||''}</div></div>
+         <div class="rev-row"><div class="rev-k">消費</div><div class="rev-v big">NT$${Number(r['消費金額']||0).toLocaleString()}</div></div>
+         ${disc>0?`<div class="rev-row"><div class="rev-k">折扣</div><div class="rev-v" style="color:#1e6b3a">－NT$${disc.toLocaleString()}</div></div>`:''}
+         ${r['備註']?`<div class="rev-row"><div class="rev-k">備註</div><div class="rev-v">${r['備註']}</div></div>`:''}`
+      :`<div class="rev-row"><div class="rev-k">人員</div><div class="rev-v">${r['操作人員']||''}</div></div>
+         <div class="rev-row"><div class="rev-k">品項</div><div class="rev-v">${r['品項']||''}</div></div>
+         <div class="rev-row"><div class="rev-k">數量</div><div class="rev-v big">${r['數量']||1}<small style="font-size:13px;color:var(--ink-3)">${r['單位']||''}</small></div></div>
+         ${r['備註']?`<div class="rev-row"><div class="rev-k">原因</div><div class="rev-v">${r['備註']}</div></div>`:''}`;
+    return`<div class="rev-card">
+      <div class="rev-head">
+        <span class="rev-type ${isDsc?'discount':'waste'}">${r['類型']}</span>
+        <span class="rev-time">${fmtDate(r['日期'])} ${fmtTime(r['時間'])}</span>
+      </div>
+      <div class="rev-body">${body}</div>
+      <div class="rev-foot">
+        <button class="btn-rev-ok" data-id="${r.id}" data-sheet="${isDsc?'優惠折扣':'耗損回報'}">✓ 確　認</button>
+        <button class="btn-rev-no" data-id="${r.id}" data-sheet="${isDsc?'優惠折扣':'耗損回報'}">駁回</button>
+      </div>
+    </div>`;
+  }).join('');
+  page.querySelectorAll('.btn-rev-ok').forEach(b=>{
+    b.addEventListener('click',()=>updateRecordStatus(b.dataset.id,b.dataset.sheet,'已確認'));
+  });
+  page.querySelectorAll('.btn-rev-no').forEach(b=>{
+    b.addEventListener('click',()=>updateRecordStatus(b.dataset.id,b.dataset.sheet,'已駁回'));
+  });
+}
+async function updateRecordStatus(id,sheet,status){
+  try{
+    const r=await fetch(`${GAS_URL}?action=updateStatus&id=${id}&sheet=${encodeURIComponent(sheet)}&status=${encodeURIComponent(status)}`).then(x=>x.json());
+    if(r.ok){
+      reviewRecords=reviewRecords.filter(rec=>String(rec.id)!==String(id));
+      renderReview();
+      showToast(status==='已確認'?'✓ 已確認':'已駁回','',status==='已確認'?'success':'error');
+    }else{showToast('操作失敗','','error');}
+  }catch(e){showToast('連線失敗','','error');}
+}
 </script>
 </body>
 </html>

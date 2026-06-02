@@ -180,6 +180,7 @@ async function verify(){
     const data=await res.json();
     if(data.ok){
       sessionStorage.setItem('staff_name', data.name);
+      sessionStorage.setItem('staff_role', data.role||'');
       sessionStorage.setItem('staff_pin', buf);
       location.href='report.html';
     } else {
