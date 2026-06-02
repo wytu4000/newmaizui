@@ -250,6 +250,7 @@ function renderStaffTab(c){
       <div class="add-form-title">新增員工</div>
       <div class="form-row"><div class="form-label">姓名</div><input class="form-input" id="new-name" placeholder="員工姓名" maxlength="10"></div>
       <div class="form-row"><div class="form-label">PIN 碼（4位數）</div><input class="form-input" id="new-pin" placeholder="0000" inputmode="numeric" maxlength="4"></div>
+      <div class="form-row"><div class="form-label">職稱</div><select class="form-input" id="new-role"><option value="PT">PT</option><option value="正職">正職</option><option value="組長">組長</option><option value="主廚">主廚</option><option value="店長">店長</option><option value="主管">主管</option></select></div>
       <button class="btn-add" id="btn-add-staff">新　增</button>
     </div>
     <div class="section-title">現有員工 (${staffList.length})</div>
@@ -258,7 +259,7 @@ function renderStaffTab(c){
     <div class="staff-card">
       <div class="staff-info">
         <div class="staff-name">${s.name}</div>
-        <div class="staff-meta">PIN: ${'●'.repeat(4)} · ID: ${s.id||'-'}</div>
+        <div class="staff-meta">PIN: ${'●'.repeat(4)} · ${s.role||'--'} · ID: ${s.id||'-'}</div>
         <div class="staff-status ${s.status==='啟用'?'active':'disabled'}">${s.status||'啟用'}</div>
       </div>
       <div class="staff-actions">
@@ -273,9 +274,10 @@ function renderStaffTab(c){
   document.getElementById('btn-add-staff').addEventListener('click',async()=>{
     const name=document.getElementById('new-name').value.trim();
     const pin=document.getElementById('new-pin').value.trim();
+    const role=document.getElementById('new-role').value;
     if(!name||!pin||pin.length!==4||isNaN(pin)){showToast('請填寫姓名與4位PIN');return}
     try{
-      const r=await fetch(`${GAS_URL}?action=addStaff&name=${encodeURIComponent(name)}&pin=${pin}`).then(x=>x.json());
+      const r=await fetch(`${GAS_URL}?action=addStaff&name=${encodeURIComponent(name)}&pin=${pin}&role=${encodeURIComponent(role)}`).then(x=>x.json());
       if(r.ok){showToast('✓ 新增成功','success');await loadAll();}
       else showToast(r.msg||'新增失敗');
     }catch(e){showToast('連線失敗');}
