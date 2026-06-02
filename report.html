@@ -176,13 +176,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="err" id="d-err-item">⚠ 請選擇回報項目</div>
     </div>
     <div class="section">
-      <div class="sec-label"><span class="sec-num">3</span>操作人員<span class="req">*</span></div>
-      <div class="staff-grid" id="d-staff"></div>
-      <input type="text" class="input-text" id="d-staff-custom" placeholder="其他人員姓名" inputmode="text" maxlength="10">
-      <div class="err" id="d-err-staff">⚠ 請選擇操作人員</div>
-    </div>
-    <div class="section">
-      <div class="sec-label"><span class="sec-num">4</span>其他工作回報</div>
+      <div class="sec-label"><span class="sec-num">3</span>其他工作回報</div>
       <textarea class="textarea-note" id="d-note" placeholder="例：A3後排電燈異常、備品不足…" rows="3"></textarea>
     </div>
   </div>
@@ -210,13 +204,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       </div>
     </div>
     <div class="section">
-      <div class="sec-label"><span class="sec-num">3</span>操作人員<span class="req">*</span></div>
-      <div class="staff-grid" id="w-staff"></div>
-      <input type="text" class="input-text" id="w-staff-custom" placeholder="其他人員姓名" inputmode="text" maxlength="10">
-      <div class="err" id="w-err-staff">⚠ 請選擇操作人員</div>
-    </div>
-    <div class="section">
-      <div class="sec-label"><span class="sec-num">4</span>備註原因<span class="req">*</span></div>
+      <div class="sec-label"><span class="sec-num">3</span>備註原因<span class="req">*</span></div>
       <textarea class="textarea-note" id="w-note" placeholder="請說明耗損原因…" rows="3"></textarea>
       <div class="err" id="w-err-note">⚠ 請填寫備註原因</div>
     </div>
@@ -235,10 +223,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 const GAS_URL='https://script.google.com/macros/s/AKfycbykRLffbcem_xIgJMw2RUPu99DPeZ76ZLlza66kajhL2YXCVqXPCHTQJ08Ki6D43ekVYg/exec';
 
 // 驗證登入
-const staffName=sessionStorage.getItem('staff_name');
+const staffName=localStorage.getItem('staff_name');
 if(!staffName) location.href='index.html';
 document.getElementById('staff-badge').textContent=staffName||'--';
-document.getElementById('logout-btn').addEventListener('click',()=>{ sessionStorage.clear(); location.href='index.html'; });
+document.getElementById('logout-btn').addEventListener('click',()=>{ localStorage.clear(); location.href='index.html'; });
 
 const WASTE_ITEMS=[
   ['ㄅ','杯子','個'],['ㄅ','杯蓋','個'],['ㄅ','冰桶','個'],['ㄅ','餐巾紙','包'],
@@ -272,33 +260,6 @@ document.querySelectorAll('.tab').forEach(t=>{
   });
 });
 
-// 員工按鈕（從 GAS 拉清單）
-async function loadStaff(){
-  try{
-    const res=await fetch(`${GAS_URL}?action=getStaff`);
-    const data=await res.json();
-    ['d-staff','w-staff'].forEach(id=>renderStaffGrid(id, data.list||[]));
-  }catch(e){
-    // fallback 空格
-    ['d-staff','w-staff'].forEach(id=>renderStaffGrid(id,[]));
-  }
-}
-function renderStaffGrid(gridId, list){
-  const g=document.getElementById(gridId);
-  g.innerHTML='';
-  list.forEach(name=>{
-    const b=document.createElement('button');
-    b.className='staff-btn'; b.dataset.staff=name; b.textContent=name;
-    b.addEventListener('click',()=>{
-      g.querySelectorAll('.staff-btn').forEach(x=>x.classList.remove('selected'));
-      b.classList.add('selected');
-      document.getElementById(gridId==='d-staff'?'d-staff-custom':'w-staff-custom').value='';
-      hideErr(gridId==='d-staff'?'d-err-staff':'w-err-staff');
-    });
-    g.appendChild(b);
-  });
-}
-loadStaff();
 
 async function loadItems(){
   try{
@@ -325,14 +286,6 @@ function renderItems(list){
   });
 }
 loadItems();
-
-// 自訂人員
-['d','w'].forEach(p=>{
-  document.getElementById(`${p}-staff-custom`).addEventListener('input',function(){
-    document.getElementById(`${p}-staff`).querySelectorAll('.staff-btn').forEach(x=>x.classList.remove('selected'));
-    if(this.value.trim()) hideErr(`${p}-err-staff`);
-  });
-});
 
 function calcDiscount(item, amt){
   const rates = {
@@ -412,20 +365,16 @@ function resetAll(){
   if(curTab===0){
     amtLog=[];renderAmt();
     document.querySelectorAll('#d-items .item-btn').forEach(x=>x.classList.remove('selected'));
-    document.getElementById('d-staff').querySelectorAll('.staff-btn').forEach(x=>x.classList.remove('selected'));
-    document.getElementById('d-staff-custom').value='';
     document.getElementById('d-note').value='';
     document.getElementById('d-discount-hint').classList.remove('show');
-    ['d-err-amount','d-err-item','d-err-staff'].forEach(hideErr);
+    ['d-err-amount','d-err-item'].forEach(hideErr);
   }else{
     wItem='';qty=1;document.getElementById('qty-display').textContent=1;
     document.getElementById('w-chip').style.display='none';
     document.getElementById('qty-unit').textContent='個';
     si.value='';
-    document.getElementById('w-staff').querySelectorAll('.staff-btn').forEach(x=>x.classList.remove('selected'));
-    document.getElementById('w-staff-custom').value='';
     document.getElementById('w-note').value='';
-    ['w-err-item','w-err-staff','w-err-note'].forEach(hideErr);
+    ['w-err-item','w-err-note'].forEach(hideErr);
   }
 }
 
@@ -437,26 +386,21 @@ document.getElementById('btn-submit').addEventListener('click',async()=>{
   const timeStr=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
   let payload=null;let ok=true;
 
+  const loginStaff=localStorage.getItem('staff_name')||'';
   if(curTab===0){
     const amt=amtTotal();
     const item=document.querySelector('#d-items .item-btn.selected')?.dataset.item||'';
-    const custom=document.getElementById('d-staff-custom').value.trim();
-    const staff=custom||document.getElementById('d-staff').querySelector('.staff-btn.selected')?.dataset.staff||'';
     const note=document.getElementById('d-note').value.trim();
     if(!amt||amt<=0){showErr('d-err-amount');ok=false}
     if(!item){showErr('d-err-item');ok=false}
-    if(!staff){showErr('d-err-staff');ok=false}
     if(!ok)return;
-    payload={action:'submit',類型:'優惠折扣',日期:dateStr,時間:timeStr,操作人員:staff,項目:item,消費金額:amt,折扣金額:calcDiscount(item,amt),備註:note,狀態:'待確認',id:Date.now()};
+    payload={action:'submit',類型:'優惠折扣',日期:dateStr,時間:timeStr,操作人員:loginStaff,項目:item,消費金額:amt,折扣金額:calcDiscount(item,amt),備註:note,狀態:'待確認',id:Date.now()};
   }else{
-    const custom=document.getElementById('w-staff-custom').value.trim();
-    const staff=custom||document.getElementById('w-staff').querySelector('.staff-btn.selected')?.dataset.staff||'';
     const note=document.getElementById('w-note').value.trim();
     if(!wItem){showErr('w-err-item');ok=false}
-    if(!staff){showErr('w-err-staff');ok=false}
     if(!note){showErr('w-err-note');ok=false}
     if(!ok)return;
-    payload={action:'submit',類型:'耗損回報',日期:dateStr,時間:timeStr,操作人員:staff,品項:wItem,數量:qty,單位:wUnit,備註:note,狀態:'待確認',id:Date.now()};
+    payload={action:'submit',類型:'耗損回報',日期:dateStr,時間:timeStr,操作人員:loginStaff,品項:wItem,數量:qty,單位:wUnit,備註:note,狀態:'待確認',id:Date.now()};
   }
 
   btn.disabled=true;btn.querySelector('span').textContent='傳送中…';
@@ -494,7 +438,7 @@ function showErr(id){document.getElementById(id)?.classList.add('show')}
 function hideErr(id){document.getElementById(id)?.classList.remove('show')}
 
 // 審核分頁（主管/店長限定）
-const staffRole=sessionStorage.getItem('staff_role')||'';
+const staffRole=localStorage.getItem('staff_role')||'';
 if(['主管','店長'].includes(staffRole)){
   document.getElementById('review-tab').style.display='';
 }

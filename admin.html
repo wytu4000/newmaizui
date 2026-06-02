@@ -179,7 +179,7 @@ async function verifyAdmin(){
     const res=await fetch(`${GAS_URL}?action=adminLogin&pin=${pinBuf}`);
     const data=await res.json();
     if(data.ok){
-      sessionStorage.setItem('admin_auth','1');
+      localStorage.setItem('admin_auth','1');
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('admin-wrap').classList.add('show');
       loadAll();
@@ -195,7 +195,7 @@ async function verifyAdmin(){
 }
 
 // 已登入
-if(sessionStorage.getItem('admin_auth')){
+if(localStorage.getItem('admin_auth')){
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('admin-wrap').classList.add('show');
   loadAll();
@@ -203,7 +203,7 @@ if(sessionStorage.getItem('admin_auth')){
 
 // ── 返回 ──
 document.getElementById('admin-back').addEventListener('click',()=>{
-  sessionStorage.removeItem('admin_auth');
+  localStorage.removeItem('admin_auth');
   location.href='index.html';
 });
 

@@ -154,7 +154,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbykRLffbcem_xIgJMw2RUPu
 let buf = '';
 
 // 已登入則直接跳轉
-if(sessionStorage.getItem('staff_name')) location.href='report.html';
+if(localStorage.getItem('staff_name')) location.href='report.html';
 
 document.querySelectorAll('.nk').forEach(k=>{
   k.addEventListener('click',()=>{
@@ -179,9 +179,9 @@ async function verify(){
     const res=await fetch(url);
     const data=await res.json();
     if(data.ok){
-      sessionStorage.setItem('staff_name', data.name);
-      sessionStorage.setItem('staff_role', data.role||'');
-      sessionStorage.setItem('staff_pin', buf);
+      localStorage.setItem('staff_name', data.name);
+      localStorage.setItem('staff_role', data.role||'');
+      localStorage.setItem('staff_pin', buf);
       location.href='report.html';
     } else {
       showError(data.msg||'PIN 碼錯誤');
