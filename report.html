@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工作回報 – 新買醉餐酒館</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: #f4f6fb;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, #0f3460, #533483);
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 17px; font-weight: 700; }
+    header span { font-size: 13px; opacity: 0.85; }
+    .logout-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .container { padding: 20px 16px; max-width: 600px; margin: 0 auto; }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .card h2 {
+      font-size: 14px;
+      color: #0f3460;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    input[type="text"], input[type="date"], input[type="time"],
+    select, textarea {
+      width: 100%;
+      padding: 11px 13px;
+      border: 2px solid #e8e8e8;
+      border-radius: 9px;
+      font-size: 14px;
+      color: #333;
+      background: #fafafa;
+      margin-bottom: 14px;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #0f3460;
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 90px; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+    .tag-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .tag {
+      padding: 7px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: #fafafa;
+      color: #555;
+    }
+    .tag.active {
+      border-color: #0f3460;
+      background: #0f3460;
+      color: #fff;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #0f3460, #533483);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-top: 4px;
+    }
+    .submit-btn:hover { opacity: 0.88; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      display: none;
+      z-index: 999;
+      text-align: center;
+    }
+    .toast.success { background: #27ae60; }
+    .toast.error   { background: #e74c3c; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🍻 新買醉餐酒館</h1>
+      <span id="headerName">員工工作回報</span>
+    </div>
+    <button class="logout-btn" onclick="logout()">登出</button>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>📋 基本資訊</h2>
+
+      <label>員工姓名</label>
+      <input type="text" id="empName" readonly style="background:#f0f0f0;color:#666;">
+
+      <div class="row">
+        <div>
+          <label>回報日期</label>
+          <input type="date" id="reportDate">
+        </div>
+        <div>
+          <label>班別</label>
+          <select id="shift">
+            <option value="早班">早班</option>
+            <option value="中班">中班</option>
+            <option value="晚班" selected>晚班</option>
+            <option value="大夜">大夜</option>
+          </select>
+        </div>
+      </div>
+
+      <label>到班時間</label>
+      <input type="time" id="clockIn">
+    </div>
+
+    <div class="card">
+      <h2>✅ 今日工作內容</h2>
+      <label>工作類別（可複選）</label>
+      <div class="tag-group" id="taskTags">
+        <span class="tag" onclick="toggleTag(this)">備料</span>
+        <span class="tag" onclick="toggleTag(this)">外場服務</span>
+        <span class="tag" onclick="toggleTag(this)">吧台調酒</span>
+        <span class="tag" onclick="toggleTag(this)">廚房出餐</span>
+        <span class="tag" onclick="toggleTag(this)">清潔環境</span>
+        <span class="tag" onclick="toggleTag(this)">盤點庫存</span>
+        <span class="tag" onclick="toggleTag(this)">收銀結帳</span>
+        <span class="tag" onclick="toggleTag(this)">包廂服務</span>
+      </div>
+
+      <label>今日工作說明</label>
+      <textarea id="workContent" placeholder="請簡述今日完成的主要工作..."></textarea>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ 問題與回報</h2>
+      <label>今日問題 / 異常狀況</label>
+      <textarea id="issues" placeholder="如有客訴、設備問題、缺貨等，請在此說明（無則填「無」）..."></textarea>
+
+      <label>給店長的建議</label>
+      <textarea id="suggestion" placeholder="（選填）任何改善建議或需要協助的事項..."></textarea>
+    </div>
+
+    <div class="card">
+      <h2>📊 今日業績（選填）</h2>
+      <div class="row">
+        <div>
+          <label>桌數</label>
+          <input type="text" id="tableCount" placeholder="例：12">
+        </div>
+        <div>
+          <label>客人人數</label>
+          <input type="text" id="guestCount" placeholder="例：48">
+        </div>
+      </div>
+      <label>備註</label>
+      <textarea id="memo" placeholder="其他備註..."></textarea>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitReport()">送出工作回報</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbykRLffbcem_xIgJMw2RUPu99DPeZ76ZLlza66kajhL2YXCVqXPCHTQJ08Ki6D43ekVYg/exec';
+
+    // 驗證登入
+    const name = sessionStorage.getItem('employeeName');
+    if (!name) { window.location.href = 'index.html'; }
+    document.getElementById('empName').value = name;
+    document.getElementById('headerName').textContent = name + ' 的工作回報';
+
+    // 預設今天日期與時間
+    const now = new Date();
+    document.getElementById('reportDate').value = now.toISOString().slice(0, 10);
+    document.getElementById('clockIn').value =
+      now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+    function toggleTag(el) { el.classList.toggle('active'); }
+
+    function logout() {
+      sessionStorage.removeItem('employeeName');
+      window.location.href = 'index.html';
+    }
+
+    function showToast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + type;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3500);
+    }
+
+    async function submitReport() {
+      const workContent = document.getElementById('workContent').value.trim();
+      const issues = document.getElementById('issues').value.trim();
+      if (!workContent) { showToast('請填寫今日工作說明', 'error'); return; }
+      if (!issues) { showToast('請填寫問題欄位（無問題請填「無」）', 'error'); return; }
+
+      const tasks = [...document.querySelectorAll('.tag.active')].map(t => t.textContent).join('、');
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = '送出中...';
+
+      const payload = {
+        action: 'submit',
+        name: name,
+        date: document.getElementById('reportDate').value,
+        shift: document.getElementById('shift').value,
+        clockIn: document.getElementById('clockIn').value,
+        tasks: tasks || '（未選擇）',
+        workContent,
+        issues,
+        suggestion: document.getElementById('suggestion').value.trim(),
+        tableCount: document.getElementById('tableCount').value.trim(),
+        guestCount: document.getElementById('guestCount').value.trim(),
+        memo: document.getElementById('memo').value.trim(),
+        timestamp: new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
+      };
+
+      try {
+        await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'text/plain' }
+        });
+        showToast('✅ 回報成功！感謝你今天的辛苦', 'success');
+        setTimeout(() => { window.location.href = 'index.html'; }, 2500);
+      } catch (err) {
+        showToast('送出失敗，請檢查網路後重試', 'error');
+        btn.disabled = false;
+        btn.textContent = '送出工作回報';
+      }
+    }
+  </script>
+</body>
+</html>

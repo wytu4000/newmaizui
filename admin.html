@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理後台 – 新買醉餐酒館</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans TC', sans-serif; background: #f4f6fb; min-height: 100vh; }
+    /* Login screen */
+    #loginScreen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    }
+    .login-card {
+      background: #fff; border-radius: 16px; padding: 40px 32px;
+      width: 100%; max-width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+    .login-card h1 { font-size: 20px; color: #1a1a2e; margin: 14px 0 6px; }
+    .login-card p  { color: #888; font-size: 13px; margin-bottom: 24px; }
+    .login-card input {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid #e0e0e0; border-radius: 10px;
+      font-size: 15px; margin-bottom: 14px; background: #fafafa;
+    }
+    .login-card input:focus { outline: none; border-color: #0f3460; }
+    .login-btn {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #0f3460, #533483);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .login-btn:hover { opacity: 0.88; }
+    .login-err { color: #e74c3c; font-size: 13px; margin-top: 10px; display: none; }
+    /* Admin screen */
+    #adminScreen { display: none; }
+    header {
+      background: linear-gradient(135deg, #0f3460, #533483);
+      color: #fff; padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 17px; font-weight: 700; }
+    .logout-btn {
+      background: rgba(255,255,255,0.2); border: none;
+      color: #fff; padding: 6px 14px; border-radius: 20px;
+      font-size: 12px; cursor: pointer;
+    }
+    .container { padding: 16px; max-width: 900px; margin: 0 auto; }
+    .filters {
+      background: #fff; border-radius: 12px; padding: 16px 18px;
+      margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+    }
+    .filters > div { display: flex; flex-direction: column; gap: 4px; }
+    .filters label { font-size: 12px; color: #666; font-weight: 600; }
+    .filters input, .filters select {
+      padding: 8px 12px; border: 2px solid #e0e0e0;
+      border-radius: 8px; font-size: 13px; background: #fafafa;
+    }
+    .filter-btn {
+      padding: 9px 18px;
+      background: #0f3460; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px; margin-bottom: 14px;
+    }
+    .stat-card {
+      background: #fff; border-radius: 12px; padding: 16px;
+      text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .stat-card .num { font-size: 28px; font-weight: 700; color: #0f3460; }
+    .stat-card .lbl { font-size: 12px; color: #888; margin-top: 4px; }
+    .table-wrap {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06); overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .table-header {
+      padding: 14px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-header h2 { font-size: 14px; color: #333; font-weight: 700; }
+    .export-btn {
+      padding: 7px 14px; background: #27ae60; color: #fff;
+      border: none; border-radius: 8px; font-size: 12px;
+      font-weight: 600; cursor: pointer;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: #f8f9ff; color: #555; font-weight: 700;
+      padding: 10px 12px; text-align: left;
+      border-bottom: 2px solid #eee; white-space: nowrap;
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    tr:hover td { background: #fafcff; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-early  { background: #fff3cd; color: #856404; }
+    .badge-mid    { background: #d1ecf1; color: #0c5460; }
+    .badge-late   { background: #d4edda; color: #155724; }
+    .badge-night  { background: #f8d7da; color: #721c24; }
+    .cell-long { max-width: 200px; white-space: pre-wrap; word-break: break-all; }
+    .loading {
+      text-align: center; padding: 40px; color: #888; font-size: 14px;
+    }
+    .empty { text-align: center; padding: 40px; color: #bbb; font-size: 14px; }
+    @media (max-width: 600px) {
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 登入畫面 -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div style="font-size:48px">🔐</div>
+    <h1>管理後台</h1>
+    <p>新買醉餐酒館工作回報系統</p>
+    <input type="password" id="adminPass" placeholder="請輸入管理員密碼" onkeydown="if(event.key==='Enter')adminLogin()">
+    <button class="login-btn" onclick="adminLogin()">進入後台</button>
+    <p class="login-err" id="loginErr">密碼錯誤</p>
+  </div>
+</div>
+
+<!-- 後台主畫面 -->
+<div id="adminScreen">
+  <header>
+    <div>
+      <h1>🍻 新買醉餐酒館 管理後台</h1>
+    </div>
+    <button class="logout-btn" onclick="adminLogout()">登出</button>
+  </header>
+
+  <div class="container">
+    <div class="filters">
+      <div>
+        <label>起始日期</label>
+        <input type="date" id="dateFrom">
+      </div>
+      <div>
+        <label>結束日期</label>
+        <input type="date" id="dateTo">
+      </div>
+      <div>
+        <label>員工姓名</label>
+        <input type="text" id="filterName" placeholder="全部">
+      </div>
+      <div>
+        <label>班別</label>
+        <select id="filterShift">
+          <option value="">全部</option>
+          <option>早班</option>
+          <option>中班</option>
+          <option>晚班</option>
+          <option>大夜</option>
+        </select>
+      </div>
+      <button class="filter-btn" onclick="loadReports()">🔍 查詢</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="num" id="statTotal">–</div>
+        <div class="lbl">總回報數</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statEmployees">–</div>
+        <div class="lbl">員工人數</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statIssues">–</div>
+        <div class="lbl">有問題回報</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statGuests">–</div>
+        <div class="lbl">累計客人數</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <h2>📋 工作回報列表</h2>
+        <button class="export-btn" onclick="exportCSV()">匯出 CSV</button>
+      </div>
+      <div id="tableBody">
+        <div class="loading">載入中...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbykRLffbcem_xIgJMw2RUPu99DPeZ76ZLlza66kajhL2YXCVqXPCHTQJ08Ki6D43ekVYg/exec';
+  const ADMIN_PASS = 'admin1234'; // 管理員密碼，請於 GAS 設定一致
+  let allData = [];
+
+  function adminLogin() {
+    const p = document.getElementById('adminPass').value;
+    if (p === ADMIN_PASS) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminScreen').style.display = 'block';
+      setDefaultDates();
+      loadReports();
+    } else {
+      document.getElementById('loginErr').style.display = 'block';
+    }
+  }
+
+  function adminLogout() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('adminScreen').style.display = 'none';
+    document.getElementById('adminPass').value = '';
+  }
+
+  function setDefaultDates() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('dateTo').value   = today.toISOString().slice(0,10);
+    document.getElementById('dateFrom').value = firstDay.toISOString().slice(0,10);
+  }
+
+  async function loadReports() {
+    document.getElementById('tableBody').innerHTML = '<div class="loading">載入中...</div>';
+    const params = new URLSearchParams({
+      action: 'getReports',
+      password: ADMIN_PASS,
+      dateFrom: document.getElementById('dateFrom').value,
+      dateTo:   document.getElementById('dateTo').value,
+      name:     document.getElementById('filterName').value,
+      shift:    document.getElementById('filterShift').value,
+    });
+    try {
+      const res  = await fetch(GAS_URL + '?' + params);
+      const data = await res.json();
+      allData = data.reports || [];
+      renderTable(allData);
+      updateStats(allData);
+    } catch (err) {
+      document.getElementById('tableBody').innerHTML =
+        '<div class="empty">載入失敗，請確認 GAS 已部署並授權</div>';
+    }
+  }
+
+  function shiftBadge(shift) {
+    const map = { '早班':'badge-early','中班':'badge-mid','晚班':'badge-late','大夜':'badge-night' };
+    return `<span class="badge ${map[shift]||''}">${shift||''}</span>`;
+  }
+
+  function renderTable(rows) {
+    if (!rows.length) {
+      document.getElementById('tableBody').innerHTML = '<div class="empty">此區間沒有回報資料</div>';
+      return;
+    }
+    const thead = `<tr>
+      <th>時間戳記</th><th>日期</th><th>姓名</th><th>班別</th>
+      <th>到班</th><th>工作類別</th><th>工作說明</th>
+      <th>問題</th><th>建議</th><th>桌數</th><th>客人數</th>
+    </tr>`;
+    const tbody = rows.map(r => `<tr>
+      <td style="white-space:nowrap;font-size:11px;">${r.timestamp||''}</td>
+      <td style="white-space:nowrap;">${r.date||''}</td>
+      <td><b>${r.name||''}</b></td>
+      <td>${shiftBadge(r.shift)}</td>
+      <td>${r.clockIn||''}</td>
+      <td class="cell-long">${r.tasks||''}</td>
+      <td class="cell-long">${r.workContent||''}</td>
+      <td class="cell-long">${r.issues||''}</td>
+      <td class="cell-long">${r.suggestion||''}</td>
+      <td>${r.tableCount||''}</td>
+      <td>${r.guestCount||''}</td>
+    </tr>`).join('');
+    document.getElementById('tableBody').innerHTML =
+      `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+  }
+
+  function updateStats(rows) {
+    document.getElementById('statTotal').textContent = rows.length;
+    document.getElementById('statEmployees').textContent =
+      new Set(rows.map(r=>r.name)).size;
+    document.getElementById('statIssues').textContent =
+      rows.filter(r => r.issues && r.issues !== '無' && r.issues.trim() !== '').length;
+    document.getElementById('statGuests').textContent =
+      rows.reduce((s,r) => s + (parseInt(r.guestCount)||0), 0);
+  }
+
+  function exportCSV() {
+    if (!allData.length) return;
+    const headers = ['時間戳記','日期','姓名','班別','到班','工作類別','工作說明','問題','建議','桌數','客人數'];
+    const keys    = ['timestamp','date','name','shift','clockIn','tasks','workContent','issues','suggestion','tableCount','guestCount'];
+    const esc = v => '"' + String(v||'').replace(/"/g,'""') + '"';
+    const csv = '﻿' + [headers.map(esc).join(','),
+      ...allData.map(r => keys.map(k=>esc(r[k])).join(','))
+    ].join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download = `工作回報_${document.getElementById('dateFrom').value}_${document.getElementById('dateTo').value}.csv`;
+    a.click();
+  }
+</script>
+</body>
+</html>
