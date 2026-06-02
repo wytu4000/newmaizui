@@ -43,6 +43,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .nt{font-family:'Noto Serif TC',serif;font-size:26px;font-weight:900;color:var(--ink-3);line-height:1;padding-bottom:3px}
 .amount-display{flex:1;min-width:0;font-family:'Space Mono',monospace;font-size:46px;font-weight:700;color:rgba(184,44,31,0.2);line-height:1;letter-spacing:-1px;transition:color 0.15s}
 .amount-log{min-height:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--ink-3);letter-spacing:1px;line-height:1.8;margin-top:4px;word-break:break-all}
+.discount-hint{display:none;font-family:'Space Mono',monospace;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--rule)}
+.discount-hint.show{display:block}
 .denom-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .dkey{padding:15px 4px;border:1.5px solid var(--rule);background:var(--paper-2);font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--ink-2);border-radius:8px;cursor:pointer;text-align:center;touch-action:manipulation;transition:all 0.1s;user-select:none;-webkit-user-select:none}
 .dkey:active{background:var(--ink);color:#fff;border-color:var(--ink);transform:scale(0.94)}
@@ -133,6 +135,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           <div class="amount-display" id="d-amt-display">0</div>
         </div>
         <div class="amount-log" id="d-amt-log"></div>
+        <div class="discount-hint" id="d-discount-hint"></div>
       </div>
       <div class="denom-grid">
         <button class="dkey" data-v="1">1</button>
@@ -287,6 +290,7 @@ function renderItems(list){
     b.addEventListener('click',()=>{
       g.querySelectorAll('.item-btn').forEach(x=>x.classList.remove('selected'));
       b.classList.add('selected'); hideErr('d-err-item');
+      updateDiscountHint();
     });
   });
 }
@@ -300,6 +304,21 @@ loadItems();
   });
 });
 
+// 折扣計算
+const DISCOUNT_RATES={'免10%服務費':0.10,'員工價7折':0.30,'免5%清潔費':0.05,'全免15%':0.15,'優惠價9折':0.10};
+function calcDiscount(item,amt){
+  const rate=DISCOUNT_RATES[item];
+  return (rate&&amt>0)?Math.round(amt*rate):0;
+}
+function updateDiscountHint(){
+  const amt=amtTotal();
+  const item=document.querySelector('#d-items .item-btn.selected')?.dataset.item||'';
+  const disc=calcDiscount(item,amt);
+  const el=document.getElementById('d-discount-hint');
+  if(disc>0){el.textContent='折扣金額：NT$ '+disc.toLocaleString();el.classList.add('show');}
+  else{el.classList.remove('show');}
+}
+
 // 金額累加
 let amtLog=[];
 function amtTotal(){return amtLog.reduce((s,v)=>s+v,0)}
@@ -309,9 +328,10 @@ function renderAmt(){
   d.textContent=t>0?t.toLocaleString():'0';
   d.style.color=t>0?'var(--red)':'rgba(184,44,31,0.2)';
   const log=document.getElementById('d-amt-log');
-  if(amtLog.length===0){log.textContent='';return}
-  log.textContent=amtLog.map(v=>'+'+v).join('  ')+'  ＝  '+t.toLocaleString();
+  if(amtLog.length===0){log.textContent='';}
+  else{log.textContent=amtLog.map(v=>'+'+v).join('  ')+'  ＝  '+t.toLocaleString();}
   if(t>0) hideErr('d-err-amount');
+  updateDiscountHint();
 }
 document.querySelectorAll('.dkey:not(.dkey-back)').forEach(b=>{
   b.addEventListener('click',()=>{amtLog.push(parseInt(b.dataset.v.replace(',','')));renderAmt();});
@@ -368,6 +388,7 @@ function resetAll(){
     document.getElementById('d-staff').querySelectorAll('.staff-btn').forEach(x=>x.classList.remove('selected'));
     document.getElementById('d-staff-custom').value='';
     document.getElementById('d-note').value='';
+    document.getElementById('d-discount-hint').classList.remove('show');
     ['d-err-amount','d-err-item','d-err-staff'].forEach(hideErr);
   }else{
     wItem='';qty=1;document.getElementById('qty-display').textContent=1;
@@ -399,7 +420,8 @@ document.getElementById('btn-submit').addEventListener('click',async()=>{
     if(!item){showErr('d-err-item');ok=false}
     if(!staff){showErr('d-err-staff');ok=false}
     if(!ok)return;
-    payload={action:'submit',類型:'優惠折扣',日期:dateStr,時間:timeStr,操作人員:staff,項目:item,金額:amt,備註:note,狀態:'待確認',id:Date.now()};
+    const disc=calcDiscount(item,amt);
+    payload={action:'submit',類型:'優惠折扣',日期:dateStr,時間:timeStr,操作人員:staff,項目:item,消費金額:amt,折扣金額:disc,備註:note,狀態:'待確認',id:Date.now()};
   }else{
     const custom=document.getElementById('w-staff-custom').value.trim();
     const staff=custom||document.getElementById('w-staff').querySelector('.staff-btn.selected')?.dataset.staff||'';
