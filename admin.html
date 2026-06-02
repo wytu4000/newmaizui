@@ -310,14 +310,16 @@ function renderRecords(c, filter){
   if(!list.length){c.innerHTML=`<div class="empty">— 目前無${filter==='待確認'?'待確認':'已處理'}回報 —</div>`;return}
   c.innerHTML=list.map(r=>{
     const isDsc=r.類型==='優惠折扣';
+    const disc=Number(r['折扣金額'])||0;
     const body=isDsc
-      ?`<div class="rec-row"><div class="rec-k">金額</div><div class="rec-v big">NT$${Number(r.金額||0).toLocaleString()}</div></div>
+      ?`<div class="rec-row"><div class="rec-k">人員</div><div class="rec-v">${r.操作人員||''}</div></div>
          <div class="rec-row"><div class="rec-k">項目</div><div class="rec-v">${r.項目||''}</div></div>
-         <div class="rec-row"><div class="rec-k">人員</div><div class="rec-v">${r.操作人員||''}</div></div>
+         <div class="rec-row"><div class="rec-k">消費</div><div class="rec-v big">NT$${Number(r['消費金額']||0).toLocaleString()}</div></div>
+         ${disc>0?`<div class="rec-row"><div class="rec-k">折扣</div><div class="rec-v" style="color:var(--green)">－NT$${disc.toLocaleString()}</div></div>`:''}
          ${r.備註?`<div class="rec-row"><div class="rec-k">備註</div><div class="rec-v">${r.備註}</div></div>`:''}`
-      :`<div class="rec-row"><div class="rec-k">品項</div><div class="rec-v">${r.品項||''}</div></div>
+      :`<div class="rec-row"><div class="rec-k">人員</div><div class="rec-v">${r.操作人員||''}</div></div>
+        <div class="rec-row"><div class="rec-k">品項</div><div class="rec-v">${r.品項||''}</div></div>
         <div class="rec-row"><div class="rec-k">數量</div><div class="rec-v big">${r.數量||1}<small style="font-size:14px;color:var(--ink-3)">${r.單位||''}</small></div></div>
-        <div class="rec-row"><div class="rec-k">人員</div><div class="rec-v">${r.操作人員||''}</div></div>
         <div class="rec-row"><div class="rec-k">原因</div><div class="rec-v">${r.備註||''}</div></div>`;
     const foot=r.狀態==='待確認'
       ?`<div class="rec-foot">
@@ -328,7 +330,7 @@ function renderRecords(c, filter){
     return `<div class="rec-card">
       <div class="rec-head">
         <span class="rec-type ${isDsc?'discount':'waste'}">${r.類型||''}</span>
-        <span class="rec-time">${r.日期||''} ${r.時間||''}</span>
+        <span class="rec-time">${fmtDate(r.日期)} ${fmtTime(r.時間)}</span>
       </div>
       <div class="rec-body">${body}</div>${foot}</div>`;
   }).join('');
@@ -349,6 +351,22 @@ async function updateStatus(id,sheet,status){
       updateBadge();renderTab();showToast(status==='已確認'?'✓ 已確認':'已駁回',status==='已確認'?'success':'');
     }
   }catch(e){showToast('連線失敗');}
+}
+
+function fmtDate(v){
+  if(!v && v!==0) return '';
+  const s=String(v).trim();
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.replace(/-/g,'/');
+  if(s.includes('T')){try{const d=new Date(s);return `${d.getUTCFullYear()}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${String(d.getUTCDate()).padStart(2,'0')}`}catch(e){}}
+  return s;
+}
+function fmtTime(v){
+  if(!v && v!==0) return '';
+  const s=String(v).trim();
+  if(/^\d{2}:\d{2}/.test(s)) return s.slice(0,5);
+  if(s.includes('T')){try{const d=new Date(s);return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`}catch(e){}}
+  return s;
 }
 
 function showToast(msg,type=''){
