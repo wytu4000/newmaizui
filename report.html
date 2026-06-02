@@ -271,6 +271,27 @@ function renderStaffGrid(gridId, list){
 }
 loadStaff();
 
+async function loadItems(){
+  try{
+    const res=await fetch(`${GAS_URL}?action=getItems`);
+    const data=await res.json();
+    renderItems(data.list||[]);
+  }catch(e){
+    renderItems(['免10%服務費','員工價7折','長官招待','開幕優惠','貴賓招待','其他']);
+  }
+}
+function renderItems(list){
+  const g=document.getElementById('d-items');
+  g.innerHTML=list.map(name=>`<button class="item-btn" data-item="${name}">${name}<div class="chk"></div></button>`).join('');
+  g.querySelectorAll('.item-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      g.querySelectorAll('.item-btn').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected'); hideErr('d-err-item');
+    });
+  });
+}
+loadItems();
+
 // 自訂人員
 ['d','w'].forEach(p=>{
   document.getElementById(`${p}-staff-custom`).addEventListener('input',function(){
