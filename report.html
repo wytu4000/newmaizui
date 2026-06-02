@@ -43,8 +43,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .nt{font-family:'Noto Serif TC',serif;font-size:26px;font-weight:900;color:var(--ink-3);line-height:1;padding-bottom:3px}
 .amount-display{flex:1;min-width:0;font-family:'Space Mono',monospace;font-size:46px;font-weight:700;color:rgba(184,44,31,0.2);line-height:1;letter-spacing:-1px;transition:color 0.15s}
 .amount-log{min-height:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--ink-3);letter-spacing:1px;line-height:1.8;margin-top:4px;word-break:break-all}
-.discount-hint{display:none;font-family:'Space Mono',monospace;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--rule)}
-.discount-hint.show{display:block}
 .denom-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .dkey{padding:15px 4px;border:1.5px solid var(--rule);background:var(--paper-2);font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--ink-2);border-radius:8px;cursor:pointer;text-align:center;touch-action:manipulation;transition:all 0.1s;user-select:none;-webkit-user-select:none}
 .dkey:active{background:var(--ink);color:#fff;border-color:var(--ink);transform:scale(0.94)}
@@ -135,7 +133,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           <div class="amount-display" id="d-amt-display">0</div>
         </div>
         <div class="amount-log" id="d-amt-log"></div>
-        <div class="discount-hint" id="d-discount-hint"></div>
       </div>
       <div class="denom-grid">
         <button class="dkey" data-v="1">1</button>
@@ -151,7 +148,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     </div>
     <div class="section">
       <div class="sec-label"><span class="sec-num">2</span>回報項目<span class="req">*</span></div>
-      <div class="items-grid" id="d-items" style="opacity:0;transition:opacity 0.2s">
+      <div class="items-grid" id="d-items">
         <button class="item-btn" data-item="免10%服務費">免10%服務費<div class="chk"></div></button>
         <button class="item-btn" data-item="員工價7折">員工價7折<div class="chk"></div></button>
         <button class="item-btn" data-item="長官招待">長官招待<div class="chk"></div></button>
@@ -163,7 +160,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     </div>
     <div class="section">
       <div class="sec-label"><span class="sec-num">3</span>操作人員<span class="req">*</span></div>
-      <div class="staff-grid" id="d-staff" style="opacity:0;transition:opacity 0.2s"></div>
+      <div class="staff-grid" id="d-staff"></div>
       <input type="text" class="input-text" id="d-staff-custom" placeholder="其他人員姓名" inputmode="text" maxlength="10">
       <div class="err" id="d-err-staff">⚠ 請選擇操作人員</div>
     </div>
@@ -197,7 +194,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     </div>
     <div class="section">
       <div class="sec-label"><span class="sec-num">3</span>操作人員<span class="req">*</span></div>
-      <div class="staff-grid" id="w-staff" style="opacity:0;transition:opacity 0.2s"></div>
+      <div class="staff-grid" id="w-staff"></div>
       <input type="text" class="input-text" id="w-staff-custom" placeholder="其他人員姓名" inputmode="text" maxlength="10">
       <div class="err" id="w-err-staff">⚠ 請選擇操作人員</div>
     </div>
@@ -253,9 +250,9 @@ async function loadStaff(){
     const data=await res.json();
     ['d-staff','w-staff'].forEach(id=>renderStaffGrid(id, data.list||[]));
   }catch(e){
+    // fallback 空格
     ['d-staff','w-staff'].forEach(id=>renderStaffGrid(id,[]));
   }
-  ['d-staff','w-staff'].forEach(id=>{ document.getElementById(id).style.opacity='1'; });
 }
 function renderStaffGrid(gridId, list){
   const g=document.getElementById(gridId);
@@ -274,29 +271,6 @@ function renderStaffGrid(gridId, list){
 }
 loadStaff();
 
-async function loadItems(){
-  try{
-    const res=await fetch(`${GAS_URL}?action=getItems`);
-    const data=await res.json();
-    renderItems(data.list||[]);
-  }catch(e){
-    renderItems(['免10%服務費','員工價7折','長官招待','開幕優惠','貴賓招待','其他']);
-  }
-  document.getElementById('d-items').style.opacity='1';
-}
-function renderItems(list){
-  const g=document.getElementById('d-items');
-  g.innerHTML=list.map(name=>`<button class="item-btn" data-item="${name}">${name}<div class="chk"></div></button>`).join('');
-  g.querySelectorAll('.item-btn').forEach(b=>{
-    b.addEventListener('click',()=>{
-      g.querySelectorAll('.item-btn').forEach(x=>x.classList.remove('selected'));
-      b.classList.add('selected'); hideErr('d-err-item');
-      updateDiscountHint();
-    });
-  });
-}
-loadItems();
-
 // 自訂人員
 ['d','w'].forEach(p=>{
   document.getElementById(`${p}-staff-custom`).addEventListener('input',function(){
@@ -304,21 +278,6 @@ loadItems();
     if(this.value.trim()) hideErr(`${p}-err-staff`);
   });
 });
-
-// 折扣計算
-const DISCOUNT_RATES={'免10%服務費':0.10,'員工價7折':0.30,'免5%清潔費':0.05,'全免15%':0.15,'優惠價9折':0.10};
-function calcDiscount(item,amt){
-  const rate=DISCOUNT_RATES[item];
-  return (rate&&amt>0)?Math.round(amt*rate):0;
-}
-function updateDiscountHint(){
-  const amt=amtTotal();
-  const item=document.querySelector('#d-items .item-btn.selected')?.dataset.item||'';
-  const disc=calcDiscount(item,amt);
-  const el=document.getElementById('d-discount-hint');
-  if(disc>0){el.textContent='折扣金額：NT$ '+disc.toLocaleString();el.classList.add('show');}
-  else{el.classList.remove('show');}
-}
 
 // 金額累加
 let amtLog=[];
@@ -329,10 +288,9 @@ function renderAmt(){
   d.textContent=t>0?t.toLocaleString():'0';
   d.style.color=t>0?'var(--red)':'rgba(184,44,31,0.2)';
   const log=document.getElementById('d-amt-log');
-  if(amtLog.length===0){log.textContent='';}
-  else{log.textContent=amtLog.map(v=>'+'+v).join('  ')+'  ＝  '+t.toLocaleString();}
+  if(amtLog.length===0){log.textContent='';return}
+  log.textContent=amtLog.map(v=>'+'+v).join('  ')+'  ＝  '+t.toLocaleString();
   if(t>0) hideErr('d-err-amount');
-  updateDiscountHint();
 }
 document.querySelectorAll('.dkey:not(.dkey-back)').forEach(b=>{
   b.addEventListener('click',()=>{amtLog.push(parseInt(b.dataset.v.replace(',','')));renderAmt();});
@@ -389,7 +347,6 @@ function resetAll(){
     document.getElementById('d-staff').querySelectorAll('.staff-btn').forEach(x=>x.classList.remove('selected'));
     document.getElementById('d-staff-custom').value='';
     document.getElementById('d-note').value='';
-    document.getElementById('d-discount-hint').classList.remove('show');
     ['d-err-amount','d-err-item','d-err-staff'].forEach(hideErr);
   }else{
     wItem='';qty=1;document.getElementById('qty-display').textContent=1;
@@ -421,8 +378,7 @@ document.getElementById('btn-submit').addEventListener('click',async()=>{
     if(!item){showErr('d-err-item');ok=false}
     if(!staff){showErr('d-err-staff');ok=false}
     if(!ok)return;
-    const disc=calcDiscount(item,amt);
-    payload={action:'submit',類型:'優惠折扣',日期:dateStr,時間:timeStr,操作人員:staff,項目:item,消費金額:amt,折扣金額:disc,備註:note,狀態:'待確認',id:Date.now()};
+    payload={action:'submit',類型:'優惠折扣',日期:dateStr,時間:timeStr,操作人員:staff,項目:item,金額:amt,備註:note,狀態:'待確認',id:Date.now()};
   }else{
     const custom=document.getElementById('w-staff-custom').value.trim();
     const staff=custom||document.getElementById('w-staff').querySelector('.staff-btn.selected')?.dataset.staff||'';
@@ -441,18 +397,21 @@ document.getElementById('btn-submit').addEventListener('click',async()=>{
     const label=curTab===0?`NT$${payload.金額.toLocaleString()} · ${payload.項目}`:`${payload.品項} × ${payload.數量}${payload.單位}`;
     showToast('✓ 回報完成',label,'success');
     resetAll();
-  }catch(e){showToast('✗ 傳送失敗','請確認網路連線','error');}
+  }catch(e){showToast('✗ 傳送失敗', e.message||'請確認網路連線','error');console.error('gasPost error:',e);}
   finally{btn.disabled=false;btn.querySelector('span').textContent='送　出';document.getElementById('overlay').classList.remove('show');}
 });
 
 function gasPost(data){
-  return new Promise(resolve=>{
-    const url = GAS_URL + '?payload=' + encodeURIComponent(JSON.stringify(data));
-    fetch(url, {method:'GET', mode:'cors'})
+  return new Promise((resolve,reject)=>{
+    const url=GAS_URL+'?payload='+encodeURIComponent(JSON.stringify(data));
+    fetch(url,{method:'GET'})
       .then(r=>r.json())
-      .then(d=>{ if(d.ok) resolve(d); else resolve(d); })
-      .catch(()=>resolve({ok:true}));
-    setTimeout(()=>resolve({ok:true}), 5000);
+      .then(d=>{
+        if(d && d.ok===false){ reject(new Error(d.msg||'GAS error')); }
+        else { resolve(d); }
+      })
+      .catch(err=>reject(err));
+    setTimeout(()=>reject(new Error('timeout')),8000);
   });
 }
 function showToast(msg,sub,type){
