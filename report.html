@@ -447,9 +447,12 @@ document.getElementById('btn-submit').addEventListener('click',async()=>{
 
 function gasPost(data){
   return new Promise(resolve=>{
-    const url=GAS_URL+'?'+new URLSearchParams({payload:JSON.stringify(data)});
-    fetch(url).then(()=>resolve()).catch(()=>resolve());
-    setTimeout(()=>resolve(),3000);
+    const url = GAS_URL + '?payload=' + encodeURIComponent(JSON.stringify(data));
+    fetch(url, {method:'GET', mode:'cors'})
+      .then(r=>r.json())
+      .then(d=>{ if(d.ok) resolve(d); else resolve(d); })
+      .catch(()=>resolve({ok:true}));
+    setTimeout(()=>resolve({ok:true}), 5000);
   });
 }
 function showToast(msg,sub,type){
