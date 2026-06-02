@@ -172,14 +172,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     </div>
     <div class="section">
       <div class="sec-label"><span class="sec-num">2</span>回報項目<span class="req">*</span></div>
-      <div class="items-grid" id="d-items">
-        <button class="item-btn" data-item="免10%服務費">免10%服務費<div class="chk"></div></button>
-        <button class="item-btn" data-item="員工價7折">員工價7折<div class="chk"></div></button>
-        <button class="item-btn" data-item="長官招待">長官招待<div class="chk"></div></button>
-        <button class="item-btn" data-item="開幕優惠">開幕優惠<div class="chk"></div></button>
-        <button class="item-btn" data-item="貴賓招待">貴賓招待<div class="chk"></div></button>
-        <button class="item-btn" data-item="其他">其他<div class="chk"></div></button>
-      </div>
+      <div class="items-grid" id="d-items"></div>
       <div class="err" id="d-err-item">⚠ 請選擇回報項目</div>
     </div>
     <div class="section">
@@ -307,6 +300,32 @@ function renderStaffGrid(gridId, list){
 }
 loadStaff();
 
+async function loadItems(){
+  try{
+    const res=await fetch(`${GAS_URL}?action=getItems`);
+    const data=await res.json();
+    renderItems(data.list||[]);
+  }catch(e){
+    renderItems(['免10%服務費','員工價7折','長官招待','貴賓招待','其他']);
+  }
+}
+function renderItems(list){
+  const g=document.getElementById('d-items');
+  g.innerHTML='';
+  list.forEach(name=>{
+    const b=document.createElement('button');
+    b.className='item-btn'; b.dataset.item=name;
+    b.innerHTML=name+'<div class="chk"></div>';
+    b.addEventListener('click',()=>{
+      g.querySelectorAll('.item-btn').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected'); hideErr('d-err-item');
+      updateDiscountHint();
+    });
+    g.appendChild(b);
+  });
+}
+loadItems();
+
 // 自訂人員
 ['d','w'].forEach(p=>{
   document.getElementById(`${p}-staff-custom`).addEventListener('input',function(){
@@ -353,15 +372,6 @@ document.querySelectorAll('.dkey:not(.dkey-back)').forEach(b=>{
   b.addEventListener('click',()=>{amtLog.push(parseInt(b.dataset.v.replace(',','')));renderAmt();});
 });
 document.getElementById('d-amt-back').addEventListener('click',()=>{if(amtLog.length>0){amtLog.pop();renderAmt();}});
-
-// 項目
-document.querySelectorAll('#d-items .item-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('#d-items .item-btn').forEach(x=>x.classList.remove('selected'));
-    b.classList.add('selected'); hideErr('d-err-item');
-    updateDiscountHint();
-  });
-});
 
 // 耗損搜尋
 let wItem='',wUnit='個';
@@ -496,7 +506,7 @@ async function loadReview(){
   try{
     const res=await fetch(`${GAS_URL}?action=getRecords`);
     const data=await res.json();
-    reviewRecords=(data.list||[]).filter(r=>r['狀態']==='待確認');
+    reviewRecords=(data.list||[]).slice(0,10);
   }catch(e){reviewRecords=[];}
   renderReview();
 }
@@ -517,10 +527,11 @@ function fmtTime(v){
 }
 function renderReview(){
   const page=document.getElementById('page-2');
-  if(!reviewRecords.length){page.innerHTML='<div class="rev-empty">— 目前無待確認回報 —</div>';return}
+  if(!reviewRecords.length){page.innerHTML='<div class="rev-empty">— 目前無回報記錄 —</div>';return}
   page.innerHTML=reviewRecords.map(r=>{
     const isDsc=r['類型']==='優惠折扣';
     const disc=Number(r['折扣金額'])||0;
+    const st=r['狀態']||'待確認';
     const body=isDsc
       ?`<div class="rev-row"><div class="rev-k">人員</div><div class="rev-v">${r['操作人員']||''}</div></div>
          <div class="rev-row"><div class="rev-k">項目</div><div class="rev-v">${r['項目']||''}</div></div>
@@ -531,16 +542,24 @@ function renderReview(){
          <div class="rev-row"><div class="rev-k">品項</div><div class="rev-v">${r['品項']||''}</div></div>
          <div class="rev-row"><div class="rev-k">數量</div><div class="rev-v big">${r['數量']||1}<small style="font-size:13px;color:var(--ink-3)">${r['單位']||''}</small></div></div>
          ${r['備註']?`<div class="rev-row"><div class="rev-k">原因</div><div class="rev-v">${r['備註']}</div></div>`:''}`;
+    let foot;
+    if(st==='待確認'){
+      foot=`<div class="rev-foot">
+        <button class="btn-rev-ok" data-id="${r.id}" data-sheet="${isDsc?'優惠折扣':'耗損回報'}">✓ 確　認</button>
+        <button class="btn-rev-no" data-id="${r.id}" data-sheet="${isDsc?'優惠折扣':'耗損回報'}">駁回</button>
+      </div>`;
+    }else if(st==='已確認'){
+      foot=`<div class="rev-foot" style="justify-content:center"><span style="font-family:'Space Mono',monospace;font-size:13px;color:#1e6b3a;letter-spacing:2px">✓ 已確認</span></div>`;
+    }else{
+      foot=`<div class="rev-foot" style="justify-content:center"><span style="font-family:'Space Mono',monospace;font-size:13px;color:var(--red);letter-spacing:2px">✕ 已駁回</span></div>`;
+    }
     return`<div class="rev-card">
       <div class="rev-head">
         <span class="rev-type ${isDsc?'discount':'waste'}">${r['類型']}</span>
         <span class="rev-time">${fmtDate(r['日期'])} ${fmtTime(r['時間'])}</span>
       </div>
       <div class="rev-body">${body}</div>
-      <div class="rev-foot">
-        <button class="btn-rev-ok" data-id="${r.id}" data-sheet="${isDsc?'優惠折扣':'耗損回報'}">✓ 確　認</button>
-        <button class="btn-rev-no" data-id="${r.id}" data-sheet="${isDsc?'優惠折扣':'耗損回報'}">駁回</button>
-      </div>
+      ${foot}
     </div>`;
   }).join('');
   page.querySelectorAll('.btn-rev-ok').forEach(b=>{
@@ -554,7 +573,8 @@ async function updateRecordStatus(id,sheet,status){
   try{
     const r=await fetch(`${GAS_URL}?action=updateStatus&id=${id}&sheet=${encodeURIComponent(sheet)}&status=${encodeURIComponent(status)}`).then(x=>x.json());
     if(r.ok){
-      reviewRecords=reviewRecords.filter(rec=>String(rec.id)!==String(id));
+      const rec=reviewRecords.find(x=>String(x.id)===String(id));
+      if(rec) rec['狀態']=status;
       renderReview();
       showToast(status==='已確認'?'✓ 已確認':'已駁回','',status==='已確認'?'success':'error');
     }else{showToast('操作失敗','','error');}
